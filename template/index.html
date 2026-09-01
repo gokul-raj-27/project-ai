@@ -67,6 +67,42 @@
   .hero{
     position:relative; padding:96px 0 80px; overflow:hidden;
   }
+  .sentence-box {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.sentence-box h3 {
+  margin-top: 0;
+}
+
+.sentence-text {
+  min-height: 60px;
+  padding: 16px;
+  margin: 15px 0;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.15);
+  font-size: 24px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.sentence-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sentence-controls button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
   .hero-grid{
     display:grid; grid-template-columns:1.1fr 0.9fr; gap:48px; align-items:center;
   }
@@ -299,6 +335,35 @@
         <h3>Demo vocabulary</h3>
         <div class="vocab-list" id="vocab-list"></div>
         <div class="demo-status" id="status">Enable your camera to begin.</div>
+        <div class="sentence-box">
+
+  <h3>Recognized Sentence</h3>
+
+  <div id="sentence-text" class="sentence-text">
+    Your sentence will appear here...
+  </div>
+
+  <div class="sentence-controls">
+
+    <button id="space-btn">
+      Space
+    </button>
+
+    <button id="delete-btn">
+      Delete
+    </button>
+
+    <button id="clear-btn">
+      Clear
+    </button>
+
+    <button id="speak-sentence-btn">
+      🔊 Speak
+    </button>
+
+  </div>
+
+</div>
       </div>
     </div>
   </div>
@@ -380,7 +445,7 @@
 
 <footer>
   <div class="wrap footer-row">
-    <p>SignSense — an in-progress sign language recognition project.</p>
+    <p>SiVoice — an in-progress sign language recognition project.</p>
     <p>Runs entirely in your browser. No video leaves your device.</p>
   </div>
 </footer>
@@ -447,6 +512,11 @@
 
 /* ---------- Live demo (uses shared.js: HandRecognizer + classifyLandmarks) ---------- */
 (function demo(){
+
+  // =========================================================
+  // EXISTING ELEMENTS
+  // =========================================================
+
   const startBtn = document.getElementById('start-btn');
   const placeholder = document.getElementById('cam-placeholder');
   const video = document.getElementById('video');
@@ -456,9 +526,16 @@
   const confLabel = document.getElementById('conf-label');
   const statusEl = document.getElementById('status');
   const vocabList = document.getElementById('vocab-list');
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-letters.forEach(letter => {
+
+  // =========================================================
+  // VOCABULARY
+  // =========================================================
+
+  const letters =
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  letters.forEach(letter => {
 
     const chip = document.createElement("span");
 
@@ -470,44 +547,567 @@ letters.forEach(letter => {
 
     vocabList.appendChild(chip);
 
-});
-  const chips = document.querySelectorAll('.vocab-chip');
+  });
 
-  const recognizer = new HandRecognizer(video, canvas);
-  recognizer.onResult((res) => {
-    if (!res){
-      readingEl.textContent = '—';
-      confFill.style.width = '0%';
-      confLabel.textContent = '0%';
-      chips.forEach(c=>c.classList.remove('active'));
-      statusEl.textContent = 'Show a hand to the camera.';
+  const chips =
+    document.querySelectorAll('.vocab-chip');
+
+
+  // =========================================================
+  // PHASE 1
+  // TEMPORAL PREDICTION SMOOTHING
+  // =========================================================
+
+  const predictionHistory = [];
+
+  const SMOOTHING_FRAMES = 8;
+
+  const MIN_CONFIDENCE = 0.70;
+
+  let stablePrediction = null;
+
+
+  function getSmoothedPrediction(label) {
+
+    if (!label) {
+      return null;
+    }
+
+    predictionHistory.push(label);
+
+    // Keep only recent predictions
+    if (
+      predictionHistory.length >
+      SMOOTHING_FRAMES
+    ) {
+      predictionHistory.shift();
+    }
+
+    // Count each prediction
+    const counts = {};
+
+    predictionHistory.forEach(item => {
+
+      if (!counts[item]) {
+        counts[item] = 0;
+      }
+
+      counts[item]++;
+
+    });
+
+
+    // Find most common prediction
+    let bestLabel = null;
+    let bestCount = 0;
+
+    Object.keys(counts).forEach(labelName => {
+
+      if (counts[labelName] > bestCount) {
+
+        bestLabel = labelName;
+        bestCount = counts[labelName];
+
+      }
+
+    });
+
+
+    // Require majority
+    if (
+      bestCount <
+      Math.ceil(SMOOTHING_FRAMES / 2)
+    ) {
+      return null;
+    }
+
+    return bestLabel;
+  }
+
+
+  // =========================================================
+  // PHASE 2
+  // VOICE CONTROL
+  // =========================================================
+
+  let lastSpokenLetter = null;
+
+
+  function speakText(text) {
+
+    if (!text || !text.trim()) {
       return;
     }
-    readingEl.textContent = res.label;
-    const pct = Math.round(res.confidence * 100);
-    confFill.style.width = pct + '%';
-    confLabel.textContent = pct + '%';
-    chips.forEach(c => c.classList.toggle('active', c.dataset.name === res.label));
-    statusEl.textContent = 'Detecting from your camera locally — nothing is sent anywhere.';
-  });
 
-  startBtn.addEventListener('click', async () => {
-    startBtn.disabled = true;
-    startBtn.textContent = 'Starting…';
-    statusEl.textContent = 'Requesting camera access…';
-    try{
-      await recognizer.start();
-      placeholder.classList.add('hidden');
-      statusEl.textContent = 'Show a hand to the camera.';
-    } catch(err){
-      console.error(err);
-      statusEl.textContent = 'Could not access the camera or load the model. Check camera permissions and your connection.';
-      startBtn.disabled = false;
-      startBtn.textContent = 'Enable camera';
+    if (!("speechSynthesis" in window)) {
+
+      console.warn(
+        "Speech synthesis is not supported."
+      );
+
+      return;
     }
-  });
-})();
 
+    // Stop previous speech
+    window.speechSynthesis.cancel();
+
+    const utterance =
+      new SpeechSynthesisUtterance(text);
+
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    window.speechSynthesis.speak(
+      utterance
+    );
+  }
+
+
+  function speakLetter(letter) {
+
+    if (!letter) {
+      return;
+    }
+
+    // Don't repeatedly speak same letter
+    if (
+      letter === lastSpokenLetter
+    ) {
+      return;
+    }
+
+    lastSpokenLetter = letter;
+
+    speakText(letter);
+  }
+
+
+  // =========================================================
+  // PHASE 3
+  // SENTENCE BUILDER
+  // =========================================================
+
+  let sentence = "";
+
+  let lastAddedLetter = "";
+
+  let lastAddedTime = 0;
+
+
+  function updateSentenceUI() {
+
+    const sentenceEl =
+      document.getElementById(
+        "sentence-text"
+      );
+
+    if (!sentenceEl) {
+      return;
+    }
+
+    if (sentence.length > 0) {
+
+      sentenceEl.textContent =
+        sentence;
+
+    } else {
+
+      sentenceEl.textContent =
+        "Your sentence will appear here...";
+
+    }
+  }
+
+
+  function addLetter(letter) {
+
+    if (!letter) {
+      return;
+    }
+
+    const now = Date.now();
+
+
+    // Prevent the same letter being added
+    // continuously while holding the hand sign.
+    if (
+      letter === lastAddedLetter &&
+      now - lastAddedTime < 1200
+    ) {
+      return;
+    }
+
+
+    sentence += letter;
+
+    lastAddedLetter = letter;
+
+    lastAddedTime = now;
+
+    updateSentenceUI();
+  }
+
+
+  function addSpace() {
+
+    if (!sentence) {
+      return;
+    }
+
+    if (!sentence.endsWith(" ")) {
+
+      sentence += " ";
+
+    }
+
+    lastAddedLetter = "";
+
+    lastSpokenLetter = null;
+
+    updateSentenceUI();
+  }
+
+
+  function deleteLastLetter() {
+
+    if (!sentence) {
+      return;
+    }
+
+    sentence =
+      sentence.slice(0, -1);
+
+    lastAddedLetter = "";
+
+    updateSentenceUI();
+  }
+
+
+  function clearSentence() {
+
+    sentence = "";
+
+    lastAddedLetter = "";
+
+    lastSpokenLetter = null;
+
+    updateSentenceUI();
+
+    // Stop current voice
+    if (
+      "speechSynthesis" in window
+    ) {
+
+      window.speechSynthesis.cancel();
+
+    }
+  }
+
+
+  // =========================================================
+  // SENTENCE BUTTONS
+  // =========================================================
+
+  const spaceBtn =
+    document.getElementById(
+      "space-btn"
+    );
+
+  const deleteBtn =
+    document.getElementById(
+      "delete-btn"
+    );
+
+  const clearBtn =
+    document.getElementById(
+      "clear-btn"
+    );
+
+  const speakSentenceBtn =
+    document.getElementById(
+      "speak-sentence-btn"
+    );
+
+
+  if (spaceBtn) {
+
+    spaceBtn.addEventListener(
+      "click",
+      addSpace
+    );
+
+  }
+
+
+  if (deleteBtn) {
+
+    deleteBtn.addEventListener(
+      "click",
+      deleteLastLetter
+    );
+
+  }
+
+
+  if (clearBtn) {
+
+    clearBtn.addEventListener(
+      "click",
+      clearSentence
+    );
+
+  }
+
+
+  if (speakSentenceBtn) {
+
+    speakSentenceBtn.addEventListener(
+      "click",
+      () => {
+
+        if (!sentence.trim()) {
+
+          statusEl.textContent =
+            "No sentence to speak.";
+
+          return;
+
+        }
+
+        speakText(sentence);
+
+        statusEl.textContent =
+          "Speaking sentence...";
+
+      }
+    );
+
+  }
+
+
+  // =========================================================
+  // HAND RECOGNIZER
+  // =========================================================
+
+  const recognizer =
+    new HandRecognizer(
+      video,
+      canvas
+    );
+
+
+  // =========================================================
+  // PREDICTION RESULT
+  // =========================================================
+
+  recognizer.onResult((res) => {
+
+
+    // -------------------------------------------------------
+    // NO HAND
+    // -------------------------------------------------------
+
+    if (!res) {
+
+      predictionHistory.length = 0;
+
+      stablePrediction = null;
+
+      readingEl.textContent = "—";
+
+      confFill.style.width = "0%";
+
+      confLabel.textContent = "0%";
+
+      chips.forEach(c =>
+        c.classList.remove("active")
+      );
+
+      statusEl.textContent =
+        "Show a hand to the camera.";
+
+      return;
+    }
+
+
+    // -------------------------------------------------------
+    // RAW PREDICTION
+    // -------------------------------------------------------
+
+    const rawLabel =
+      String(res.label || "").toUpperCase();
+
+    const confidence =
+      Number(res.confidence || 0);
+
+
+    // -------------------------------------------------------
+    // CONFIDENCE FILTER
+    // -------------------------------------------------------
+
+    const pct =
+      Math.round(
+        confidence * 100
+      );
+
+    confFill.style.width =
+      pct + "%";
+
+    confLabel.textContent =
+      pct + "%";
+
+
+    if (
+      !rawLabel ||
+      confidence < MIN_CONFIDENCE
+    ) {
+
+      readingEl.textContent =
+        "?";
+
+      chips.forEach(c =>
+        c.classList.remove("active")
+      );
+
+      statusEl.textContent =
+        "Low confidence — keep your hand steady.";
+
+      return;
+    }
+
+
+    // -------------------------------------------------------
+    // PHASE 1
+    // SMOOTH PREDICTION
+    // -------------------------------------------------------
+
+    const smoothedLabel =
+      getSmoothedPrediction(
+        rawLabel
+      );
+
+
+    // Not enough agreement yet
+    if (!smoothedLabel) {
+
+      readingEl.textContent =
+        "Detecting...";
+
+      statusEl.textContent =
+        "Stabilizing prediction...";
+
+      return;
+    }
+
+
+    stablePrediction =
+      smoothedLabel;
+
+
+    // -------------------------------------------------------
+    // UPDATE PREDICTION UI
+    // -------------------------------------------------------
+
+    readingEl.textContent =
+      stablePrediction;
+
+
+    chips.forEach(c => {
+
+      c.classList.toggle(
+        "active",
+        c.dataset.name ===
+        stablePrediction
+      );
+
+    });
+
+
+    statusEl.textContent =
+      "Sign detected successfully.";
+
+
+    // -------------------------------------------------------
+    // PHASE 2
+    // SPEAK ONLY ONCE
+    // -------------------------------------------------------
+
+    speakLetter(
+      stablePrediction
+    );
+
+
+    // -------------------------------------------------------
+    // PHASE 3
+    // ADD TO SENTENCE
+    // -------------------------------------------------------
+
+    addLetter(
+      stablePrediction
+    );
+
+  });
+
+
+  // =========================================================
+  // CAMERA START
+  // =========================================================
+
+  startBtn.addEventListener(
+    "click",
+    async () => {
+
+      startBtn.disabled = true;
+
+      startBtn.textContent =
+        "Starting…";
+
+      statusEl.textContent =
+        "Requesting camera access…";
+
+
+      try {
+
+        await recognizer.start();
+
+
+        placeholder.classList.add(
+          "hidden"
+        );
+
+
+        statusEl.textContent =
+          "Show a hand to the camera.";
+
+
+      } catch (err) {
+
+        console.error(err);
+
+
+        statusEl.textContent =
+          "Could not access the camera or load the model. Check camera permissions and your connection.";
+
+
+        startBtn.disabled = false;
+
+        startBtn.textContent =
+          "Enable camera";
+
+      }
+
+    }
+  );
+
+
+  // =========================================================
+  // INITIAL SENTENCE UI
+  // =========================================================
+
+  updateSentenceUI();
+
+})();
 /* ---------- Learn hub: tab switching ---------- */
 (function tabs(){
   const tabButtons = document.querySelectorAll('.tab');
