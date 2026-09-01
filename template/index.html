@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SignSense — AI Sign Language Recognition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12142b;
+    --panel:#1b1e42;
+    --panel-2:#232755;
+    --cyan:#5eead4;
+    --amber:#ffb86b;
+    --text:#f1f0fa;
+    --muted:#9098c4;
+    --line:rgba(241,240,250,0.1);
+    --radius:14px;
+    --display: 'Sora', sans-serif;
+    --body: 'Inter', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:var(--body);
+    line-height:1.5;
+    overflow-x:hidden;
+  }
+  a{color:inherit;}
+  .wrap{max-width:1100px; margin:0 auto; padding:0 24px;}
+
+  /* NAV */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:rgba(18,20,43,0.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 24px; max-width:1100px; margin:0 auto;
+  }
+  .logo{
+    font-family:var(--display); font-weight:800; font-size:1.25rem;
+    display:flex; align-items:center; gap:8px; letter-spacing:-0.02em;
+  }
+  .logo-dot{width:10px; height:10px; border-radius:50%; background:var(--cyan); box-shadow:0 0 12px var(--cyan);}
+  .nav-links{display:flex; gap:32px; font-size:0.95rem; color:var(--muted);}
+  .nav-links a{transition:color .2s;}
+  .nav-links a:hover, .nav-links a:focus-visible{color:var(--text);}
+  .btn{
+    font-family:var(--body); font-weight:600; font-size:0.9rem;
+    padding:10px 20px; border-radius:999px; border:none; cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:focus-visible{outline:2px solid var(--cyan); outline-offset:2px;}
+  .btn-primary{background:var(--cyan); color:#08211e;}
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 8px 24px rgba(94,234,212,0.25);}
+  .btn-ghost{background:transparent; color:var(--text); border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--cyan); color:var(--cyan);}
+
+  /* HERO */
+  .hero{
+    position:relative; padding:96px 0 80px; overflow:hidden;
+  }
+  .hero-grid{
+    display:grid; grid-template-columns:1.1fr 0.9fr; gap:48px; align-items:center;
+  }
+  .eyebrow{
+    font-family:var(--mono); color:var(--cyan); font-size:0.8rem;
+    letter-spacing:0.12em; text-transform:uppercase; margin-bottom:18px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{content:''; width:24px; height:1px; background:var(--cyan);}
+  h1{
+    font-family:var(--display); font-weight:800; font-size:clamp(2.2rem, 4.5vw, 3.4rem);
+    line-height:1.08; letter-spacing:-0.02em; margin-bottom:22px;
+  }
+  h1 span{color:var(--cyan);}
+  .hero p{color:var(--muted); font-size:1.1rem; max-width:480px; margin-bottom:32px;}
+  .hero-ctas{display:flex; gap:14px; flex-wrap:wrap;}
+
+  .hand-stage{
+    position:relative; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+  }
+  .hand-stage svg{width:100%; max-width:420px; height:auto;}
+  .landmark{fill:var(--cyan);}
+  .bone{stroke:var(--cyan); stroke-width:1.5; opacity:0.5;}
+  .trace-word{
+    font-family:var(--mono); color:var(--amber); font-size:0.85rem;
+    text-align:center; margin-top:14px; letter-spacing:0.15em; min-height:1.2em;
+  }
+
+  /* SECTIONS */
+  section{padding:80px 0;}
+  .section-head{max-width:600px; margin:0 auto 56px; text-align:center;}
+  .section-head .eyebrow{justify-content:center;}
+  .section-head .eyebrow::before{display:none;}
+  h2{
+    font-family:var(--display); font-weight:700; font-size:clamp(1.6rem, 3vw, 2.2rem);
+    letter-spacing:-0.01em; margin-bottom:12px;
+  }
+  .section-head p{color:var(--muted); font-size:1.05rem;}
+
+  /* HOW IT WORKS */
+  .steps{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:24px;
+  }
+  .step{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:32px 26px; position:relative;
+  }
+  .step-num{
+    font-family:var(--mono); color:var(--amber); font-size:0.85rem; margin-bottom:18px; display:block;
+  }
+  .step h3{font-family:var(--display); font-size:1.15rem; margin-bottom:10px;}
+  .step p{color:var(--muted); font-size:0.95rem;}
+  .step::after{
+    content:''; position:absolute; top:32px; right:-24px; width:24px; height:1px;
+    background:var(--line);
+  }
+  .step:last-child::after{display:none;}
+
+  /* DEMO */
+  .demo-section{background:var(--panel); border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  .demo-layout{
+    display:grid; grid-template-columns:1.2fr 0.8fr; gap:32px; align-items:start;
+  }
+  .cam-frame{
+    position:relative; border-radius:var(--radius); overflow:hidden;
+    background:#000; aspect-ratio:4/3; border:1px solid var(--line);
+  }
+  .cam-frame video, .cam-frame canvas{
+    position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;
+  }
+  .cam-frame video{transform:scaleX(-1);}
+  .cam-frame canvas{transform:scaleX(-1);}
+  .cam-placeholder{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:16px; color:var(--muted); text-align:center; padding:24px; z-index:2; background:#000;
+  }
+  .cam-placeholder.hidden{display:none;}
+  .demo-panel{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius); padding:28px;
+  }
+  .demo-panel h3{font-family:var(--display); margin-bottom:16px; font-size:1.1rem;}
+  .reading{
+    font-family:var(--mono); font-size:2.4rem; color:var(--cyan); min-height:56px;
+    margin-bottom:6px; word-break:break-word;
+  }
+  .confidence-row{display:flex; align-items:center; gap:10px; margin-bottom:22px;}
+  .confidence-bar{flex:1; height:6px; background:rgba(241,240,250,0.1); border-radius:999px; overflow:hidden;}
+  .confidence-fill{height:100%; width:0%; background:var(--amber); transition:width .15s ease;}
+  .confidence-label{font-family:var(--mono); font-size:0.8rem; color:var(--muted); width:42px; text-align:right;}
+  .vocab-list{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px;}
+  .vocab-chip{
+    font-family:var(--mono); font-size:0.75rem; padding:6px 12px; border-radius:999px;
+    border:1px solid var(--line); color:var(--muted);
+  }
+  .vocab-chip.active{border-color:var(--cyan); color:var(--cyan); background:rgba(94,234,212,0.08);}
+  .demo-status{font-size:0.85rem; color:var(--muted); margin-top:16px; min-height:1.4em;}
+
+  /* LEARN HUB */
+  .tabs{display:flex; gap:8px; justify-content:center; margin-bottom:36px; flex-wrap:wrap;}
+  .tab{
+    font-family:var(--body); font-weight:600; font-size:0.9rem; color:var(--muted);
+    background:transparent; border:1px solid var(--line); border-radius:999px;
+    padding:9px 20px; cursor:pointer; transition:all .2s;
+  }
+  .tab:hover{color:var(--text);}
+  .tab.active{background:var(--cyan); color:#08211e; border-color:var(--cyan);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .dict-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:16px;}
+  .dict-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:22px; cursor:default;
+  }
+  .dict-card h4{font-family:var(--display); font-size:1.05rem; margin-bottom:8px; color:var(--cyan);}
+  .dict-card p{color:var(--muted); font-size:0.9rem;}
+
+  .learn-layout{display:grid; grid-template-columns:1.2fr 0.8fr; gap:32px; align-items:start;}
+  .lesson-progress{font-family:var(--mono); font-size:0.8rem; color:var(--muted); margin-bottom:14px;}
+  .lesson-desc{color:var(--muted); font-size:0.95rem; margin-bottom:20px;}
+  .hold-bar{height:8px; background:rgba(241,240,250,0.1); border-radius:999px; overflow:hidden; margin-bottom:16px;}
+  .hold-fill{height:100%; width:0%; background:var(--cyan); transition:width .1s linear;}
+  .quiz-score{font-family:var(--mono); font-size:1.4rem; color:var(--amber); margin-bottom:16px;}
+
+  @media (max-width:860px){
+    .learn-layout{grid-template-columns:1fr;}
+  }
+
+  /* FOOTER */
+  footer{padding:48px 0; border-top:1px solid var(--line);}
+  .footer-row{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;}
+  .footer-row p{color:var(--muted); font-size:0.85rem;}
+
+  @media (max-width:860px){
+    .hero-grid{grid-template-columns:1fr;}
+    .hero-grid .hand-stage{order:-1; max-width:280px; margin:0 auto 24px;}
+    .steps{grid-template-columns:1fr;}
+    .step::after{display:none;}
+    .demo-layout{grid-template-columns:1fr;}
+    .nav-links{display:none;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <div class="logo"><span class="logo-dot"></span>SiVoice</div>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#demo">Live demo</a>
+      <a href="#learn">Learn</a>
+      <a href="#team">Team</a>
+    </div>
+    <a href="#demo" class="btn btn-primary">Try the demo</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Real-time · On-device · MediaPipe powered</div>
+      <h1>Sign language, <span>understood</span> as it happens.</h1>
+      <p>SignSense reads hand shape and motion through your camera and turns it into text in real time — no sensors, no gloves, just a browser.</p>
+      <div class="hero-ctas">
+        <a href="#demo" class="btn btn-primary">Try the live demo</a>
+        <a href="#how" class="btn btn-ghost">See how it works</a>
+      </div>
+    </div>
+    <div class="hand-stage">
+      <svg id="hand-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
+    </div>
+  </div>
+  <div class="trace-word" id="trace-word"></div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">The pipeline</div>
+      <h2>Three steps, all in the browser</h2>
+      <p>The same approach behind the demo below scales to a full sign vocabulary.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <span class="step-num">01 · Capture</span>
+        <h3>Landmark detection</h3>
+        <p>MediaPipe Hands tracks 21 key points per hand from the camera feed, 30+ times a second, entirely on-device.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">02 · Classify</span>
+        <h3>Lightweight classifier</h3>
+        <p>Landmark positions and angles feed a small, fast model trained to recognize distinct hand shapes and gestures.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">03 · Translate</span>
+        <h3>Text in real time</h3>
+        <p>Recognized signs are assembled into words and phrases, streamed to the screen as you sign.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="demo" class="demo-section">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Try it now</div>
+      <h2>Live gesture recognition</h2>
+      <p>This runs a small demo vocabulary of hand shapes, right in your browser. Nothing is uploaded anywhere.</p>
+    </div>
+    <div class="demo-layout">
+      <div class="cam-frame" id="cam-frame">
+        <div class="cam-placeholder" id="cam-placeholder">
+          <p>Camera is off</p>
+          <button class="btn btn-primary" id="start-btn">Enable camera</button>
+        </div>
+        <video id="video" playsinline></video>
+        <canvas id="overlay"></canvas>
+      </div>
+      <div class="demo-panel">
+        <h3>Detected sign</h3>
+        <div class="reading" id="reading">—</div>
+        <div class="confidence-row">
+          <div class="confidence-bar"><div class="confidence-fill" id="conf-fill"></div></div>
+          <div class="confidence-label" id="conf-label">0%</div>
+        </div>
+        <h3>Demo vocabulary</h3>
+        <div class="vocab-list" id="vocab-list"></div>
+        <div class="demo-status" id="status">Enable your camera to begin.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="learn">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Practice</div>
+      <h2>Learn the demo vocabulary</h2>
+      <p>Same camera, same recognizer as the live demo above — now used to teach.</p>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="dictionary" role="tab" aria-selected="true">Dictionary</button>
+      <button class="tab" data-tab="lessons" role="tab" aria-selected="false">Lessons</button>
+      <button class="tab" data-tab="quiz" role="tab" aria-selected="false">Quiz</button>
+    </div>
+
+    <!-- Dictionary -->
+    <div class="tab-panel active" id="panel-dictionary">
+      <div class="dict-grid" id="dict-grid"></div>
+    </div>
+
+    <!-- Lessons -->
+    <div class="tab-panel" id="panel-lessons">
+      <div class="learn-layout">
+        <div class="cam-frame" id="lesson-cam-frame">
+          <div class="cam-placeholder" id="lesson-placeholder">
+            <p>Camera is off</p>
+            <button class="btn btn-primary" id="lesson-start-btn">Enable camera</button>
+          </div>
+          <video id="lesson-video" playsinline></video>
+          <canvas id="lesson-overlay"></canvas>
+        </div>
+        <div class="demo-panel">
+          <div class="lesson-progress" id="lesson-progress"></div>
+          <h3 id="lesson-target-name">Open palm</h3>
+          <p class="lesson-desc" id="lesson-target-desc">Spread all five fingers wide, palm facing the camera.</p>
+          <div class="hold-bar"><div class="hold-fill" id="lesson-hold-fill"></div></div>
+          <div class="demo-status" id="lesson-status">Enable your camera to start the lesson.</div>
+          <button class="btn btn-ghost" id="lesson-skip-btn" style="margin-top:16px;">Skip this sign</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quiz -->
+    <div class="tab-panel" id="panel-quiz">
+      <div class="learn-layout">
+        <div class="cam-frame" id="quiz-cam-frame">
+          <div class="cam-placeholder" id="quiz-placeholder">
+            <p>Camera is off</p>
+            <button class="btn btn-primary" id="quiz-start-btn">Start quiz</button>
+          </div>
+          <video id="quiz-video" playsinline></video>
+          <canvas id="quiz-overlay"></canvas>
+        </div>
+        <div class="demo-panel">
+          <div class="lesson-progress" id="quiz-progress"></div>
+          <h3>Show: <span id="quiz-target-name">—</span></h3>
+          <div class="quiz-score">Score: <span id="quiz-score">0</span> / <span id="quiz-total">0</span></div>
+          <div class="hold-bar"><div class="hold-fill" id="quiz-hold-fill"></div></div>
+          <div class="demo-status" id="quiz-status">Press start to begin a 5-round quiz.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="team">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Built by</div>
+      <h2>A small team, shipping in phases</h2>
+      <p>Three people. One pipeline: landmark capture, a lightweight classifier, and a growing sign vocabulary — built out over a phased timeline rather than all at once.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-row">
+    <p>SignSense — an in-progress sign language recognition project.</p>
+    <p>Runs entirely in your browser. No video leaves your device.</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script src="{{ url_for('static', filename='shared.js') }}"></script>
+<script>
+/* ---------- Hero signature animation: hand landmark skeleton tracing a word ---------- */
+(function heroAnim(){
+  const svg = document.getElementById('hand-svg');
+  const traceEl = document.getElementById('trace-word');
+  const NS = 'http://www.w3.org/2000/svg';
+
+  // A simplified static hand skeleton (open palm pose) built from approximate
+  // MediaPipe landmark proportions, used purely as a decorative signature.
+  const points = [
+    [150,230],[120,210],[100,180],[90,150],[85,120], // thumb chain
+    [140,190],[135,140],[132,105],[130,75],           // index chain
+    [155,195],[153,135],[152,95],[151,60],            // middle chain
+    [170,200],[172,145],[173,110],[174,80],           // ring chain
+    [185,210],[190,165],[193,135],[196,110]           // pinky chain
+  ];
+  const bones = [
+    [0,1],[1,2],[2,3],[3,4],
+    [0,5],[5,6],[6,7],[7,8],
+    [0,9],[9,10],[10,11],[11,12],
+    [0,13],[13,14],[14,15],[15,16],
+    [0,17],[17,18],[18,19],[19,20]
+  ];
+
+  bones.forEach(([a,b])=>{
+    const line = document.createElementNS(NS,'line');
+    line.setAttribute('x1', points[a][0]); line.setAttribute('y1', points[a][1]);
+    line.setAttribute('x2', points[b][0]); line.setAttribute('y2', points[b][1]);
+    line.setAttribute('class','bone');
+    svg.appendChild(line);
+  });
+  points.forEach((p,i)=>{
+    const c = document.createElementNS(NS,'circle');
+    c.setAttribute('cx', p[0]); c.setAttribute('cy', p[1]);
+    c.setAttribute('r', i===0 ? 6 : 4.5);
+    c.setAttribute('class','landmark');
+    c.style.opacity = '0';
+    c.style.transition = `opacity .4s ease ${i*30}ms`;
+    svg.appendChild(c);
+    requestAnimationFrame(()=> setTimeout(()=> c.style.opacity='1', 50));
+  });
+
+  const word = 'HELLO';
+  let i = 0;
+  function typeWord(){
+    traceEl.textContent = word.slice(0, i) + (i < word.length ? '▌' : '');
+    i++;
+    if (i <= word.length){
+      setTimeout(typeWord, 260);
+    } else {
+      setTimeout(()=>{ i = 0; typeWord(); }, 1800);
+    }
+  }
+  typeWord();
+})();
+
+/* ---------- Live demo (uses shared.js: HandRecognizer + classifyLandmarks) ---------- */
+(function demo(){
+  const startBtn = document.getElementById('start-btn');
+  const placeholder = document.getElementById('cam-placeholder');
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('overlay');
+  const readingEl = document.getElementById('reading');
+  const confFill = document.getElementById('conf-fill');
+  const confLabel = document.getElementById('conf-label');
+  const statusEl = document.getElementById('status');
+  const vocabList = document.getElementById('vocab-list');
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+letters.forEach(letter => {
+
+    const chip = document.createElement("span");
+
+    chip.className = "vocab-chip";
+
+    chip.dataset.name = letter;
+
+    chip.textContent = letter;
+
+    vocabList.appendChild(chip);
+
+});
+  const chips = document.querySelectorAll('.vocab-chip');
+
+  const recognizer = new HandRecognizer(video, canvas);
+  recognizer.onResult((res) => {
+    if (!res){
+      readingEl.textContent = '—';
+      confFill.style.width = '0%';
+      confLabel.textContent = '0%';
+      chips.forEach(c=>c.classList.remove('active'));
+      statusEl.textContent = 'Show a hand to the camera.';
+      return;
+    }
+    readingEl.textContent = res.label;
+    const pct = Math.round(res.confidence * 100);
+    confFill.style.width = pct + '%';
+    confLabel.textContent = pct + '%';
+    chips.forEach(c => c.classList.toggle('active', c.dataset.name === res.label));
+    statusEl.textContent = 'Detecting from your camera locally — nothing is sent anywhere.';
+  });
+
+  startBtn.addEventListener('click', async () => {
+    startBtn.disabled = true;
+    startBtn.textContent = 'Starting…';
+    statusEl.textContent = 'Requesting camera access…';
+    try{
+      await recognizer.start();
+      placeholder.classList.add('hidden');
+      statusEl.textContent = 'Show a hand to the camera.';
+    } catch(err){
+      console.error(err);
+      statusEl.textContent = 'Could not access the camera or load the model. Check camera permissions and your connection.';
+      startBtn.disabled = false;
+      startBtn.textContent = 'Enable camera';
+    }
+  });
+})();
+
+/* ---------- Learn hub: tab switching ---------- */
+(function tabs(){
+  const tabButtons = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.tab-panel');
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+      panels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected','true');
+      document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+})();
+
+
+/* ---------- Quiz: 5 random signs, timed hold, score tracked ---------- */
+(function quiz(){
+  const startBtn = document.getElementById('quiz-start-btn');
+  const placeholder = document.getElementById('quiz-placeholder');
+  const video = document.getElementById('quiz-video');
+  const canvas = document.getElementById('quiz-overlay');
+  const progressEl = document.getElementById('quiz-progress');
+  const targetEl = document.getElementById('quiz-target-name');
+  const scoreEl = document.getElementById('quiz-score');
+  const totalEl = document.getElementById('quiz-total');
+  const holdFill = document.getElementById('quiz-hold-fill');
+  const statusEl = document.getElementById('quiz-status');
+
+  const ROUNDS = 5;
+  const HOLD_FRAMES_NEEDED = 15;
+  const ROUND_TIME_MS = 6000;
+
+  let recognizer = null;
+  let round = 0;
+  let score = 0;
+  let holdCount = 0;
+  let roundTimer = null;
+  let currentTarget = null;
+  let order = [];
+
+  function shuffle(arr){
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function endRound(correct){
+    clearTimeout(roundTimer);
+    if (correct) score++;
+    scoreEl.textContent = score;
+    round++;
+    if (round >= ROUNDS){
+      targetEl.textContent = '—';
+      progressEl.textContent = 'Quiz complete';
+      statusEl.textContent = `Final score: ${score} / ${ROUNDS}. Press "Start quiz" to try again.`;
+      holdFill.style.width = '0%';
+      startBtn.disabled = false;
+      startBtn.textContent = 'Start quiz';
+      return;
+    }
+    startRound();
+  }
+
+  function startRound(){
+    holdCount = 0;
+    holdFill.style.width = '0%';
+    currentTarget = order[round % order.length].name;
+    targetEl.textContent = currentTarget;
+    progressEl.textContent = `Round ${round + 1} / ${ROUNDS}`;
+    statusEl.textContent = 'You have a few seconds — show the sign above.';
+    roundTimer = setTimeout(() => endRound(false), ROUND_TIME_MS);
+  }
+
+  startBtn.addEventListener('click', async () => {
+    startBtn.disabled = true;
+    startBtn.textContent = 'Starting…';
+    statusEl.textContent = 'Requesting camera access…';
+    try{
+      if (!recognizer){
+        recognizer = new HandRecognizer(video, canvas);
+        recognizer.onResult((res) => {
+          if (!currentTarget) return;
+          if (!res){ holdCount = 0; return; }
+          if (res.label === currentTarget && res.confidence > 0.6){
+            holdCount++;
+          } else {
+            holdCount = Math.max(0, holdCount - 2);
+          }
+          holdFill.style.width = Math.min(100, (holdCount / HOLD_FRAMES_NEEDED) * 100) + '%';
+          if (holdCount >= HOLD_FRAMES_NEEDED){
+            statusEl.textContent = 'Correct!';
+            endRound(true);
+          }
+        });
+        await recognizer.start();
+        placeholder.classList.add('hidden');
+      }
+      score = 0; round = 0; scoreEl.textContent = '0'; totalEl.textContent = ROUNDS;
+      order = [];
+      startRound();
+    } catch(err){
+      console.error(err);
+      statusEl.textContent = 'Could not access the camera. Check permissions and try again.';
+      startBtn.disabled = false;
+      startBtn.textContent = 'Start quiz';
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
