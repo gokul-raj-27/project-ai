@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Load trained model
-model = tf.keras.models.load_model("best_isl_model_old.keras")
+model = tf.keras.models.load_model("final_isl_model.keras")
 
 # Class names (A-Z)
 CLASS_NAMES = [
