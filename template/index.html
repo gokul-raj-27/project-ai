@@ -809,81 +809,7 @@
   // SENTENCE BUTTONS
   // =========================================================
 
-  const spaceBtn =
-    document.getElementById(
-      "space-btn"
-    );
 
-  const deleteBtn =
-    document.getElementById(
-      "delete-btn"
-    );
-
-  const clearBtn =
-    document.getElementById(
-      "clear-btn"
-    );
-
-  const speakSentenceBtn =
-    document.getElementById(
-      "speak-sentence-btn"
-    );
-
-
-  if (spaceBtn) {
-
-    spaceBtn.addEventListener(
-      "click",
-      addSpace
-    );
-
-  }
-
-
-  if (deleteBtn) {
-
-    deleteBtn.addEventListener(
-      "click",
-      deleteLastLetter
-    );
-
-  }
-
-
-  if (clearBtn) {
-
-    clearBtn.addEventListener(
-      "click",
-      clearSentence
-    );
-
-  }
-
-
-  if (speakSentenceBtn) {
-
-    speakSentenceBtn.addEventListener(
-      "click",
-      () => {
-
-        if (!sentence.trim()) {
-
-          statusEl.textContent =
-            "No sentence to speak.";
-
-          return;
-
-        }
-
-        speakText(sentence);
-
-        statusEl.textContent =
-          "Speaking sentence...";
-
-      }
-    );
-
-  }
 
 
   // =========================================================
@@ -1106,6 +1032,45 @@
   // =========================================================
 
   updateSentenceUI();
+  const spaceBtn =
+  document.getElementById("space-btn");
+
+const deleteBtn =
+  document.getElementById("delete-btn");
+
+const clearBtn =
+  document.getElementById("clear-btn");
+
+const speakSentenceBtn =
+  document.getElementById("speak-sentence-btn");
+
+if (spaceBtn) {
+  spaceBtn.addEventListener(
+    "click",
+    addSpace
+  );
+}
+
+if (deleteBtn) {
+  deleteBtn.addEventListener(
+    "click",
+    deleteLastLetter
+  );
+}
+
+if (clearBtn) {
+  clearBtn.addEventListener(
+    "click",
+    clearSentence
+  );
+}
+
+if (speakSentenceBtn) {
+  speakSentenceBtn.addEventListener(
+    "click",
+    () => speakText(sentence)
+  );
+}
 
 })();
 /* ---------- Learn hub: tab switching ---------- */
